@@ -1,6 +1,6 @@
 # Audio Quill
 
-Transcribe WAV files and generate markdown files with titles using Whisper and OpenAI.
+Transcribe WAV files and generate markdown files with titles using Whisper (locally) and OpenAI.
 
 ### Background:
 
@@ -18,10 +18,7 @@ But audio isn't as useful as text. So this script turns them into text which I c
 
 You need an OpenAPI api key.
 
-```shell
-pip install poetry
-poetry install
-```
+TODO
 
 ## Usage
 
