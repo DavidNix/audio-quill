@@ -1,6 +1,8 @@
 # Audio Quill
 
-Transcribe WAV files and generate markdown files with titles using Whisper (locally) and OpenAI.
+Transcribe WAV files to text files with titles using Whisper and Ollama.
+
+All processing is local. No data leaves your machine.
 
 ### Background:
 
@@ -30,6 +32,8 @@ ollama run llama3.1
 ```
 
 ## Usage
+
+IMPORTANT: I've only tested this on my M2 MacBook. YMMV.
 
 Run the app
 
