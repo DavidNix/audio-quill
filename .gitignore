@@ -20,3 +20,6 @@
 
 # Local temp dir
 /tmp
+
+# Project files
+whisper-tiny.en.llamafile

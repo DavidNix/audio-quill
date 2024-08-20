@@ -16,15 +16,15 @@ But audio isn't as useful as text. So this script turns them into text which I c
 
 ## Setup
 
-You need an OpenAPI api key.
+Download whisperfile.
 
-TODO
+```sh
+wget https://huggingface.co/Mozilla/whisperfile/resolve/main/whisper-tiny.en.llamafile
+chmod +x whisper-tiny.en.llamafile
+```
 
 ## Usage
 
-```shell
-export OPENAI_API_KEY=<your key>
+## TODO
 
-```
-
- e
+Self-contained binary
