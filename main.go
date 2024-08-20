@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -43,7 +44,6 @@ No data leaves your machine.`,
 	_ = cmd.MarkFlagRequired("dest")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-
 		if err := os.MkdirAll(cfg.DestDir, 0777); err != nil {
 			return err
 		}
@@ -56,12 +56,13 @@ No data leaves your machine.`,
 
 		ctx := cmd.Context()
 
-		for _, wav := range files {
-			cmd.Printf("Processing %s ...\n", wav)
-			if err = processFile(ctx, cfg.DestDir, wav); err != nil {
+		for i, wav := range files {
+			cmd.Printf("Processing %d. %s ...\n", i+1, wav)
+			fname, err := processFile(ctx, cfg.DestDir, wav)
+			if err != nil {
 				return fmt.Errorf("failed to process %s: %w", wav, err)
 			}
-
+			cmd.Printf("\tSaved file %s\n", fname)
 		}
 		return nil
 	}
@@ -83,27 +84,36 @@ func findWAVFiles(source string) ([]string, error) {
 	return wavFiles, err
 }
 
-func processFile(ctx context.Context, destDir string, waveFile string) error {
+func processFile(ctx context.Context, destDir string, waveFile string) (string, error) {
 	transcribed, err := transcribe(ctx, waveFile)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	summary, err := ollamaTitleSummary(ctx, string(transcribed))
 	if err != nil {
-		return fmt.Errorf("failed to create summary: %w", err)
+		return "", fmt.Errorf("failed to create summary: %w", err)
 	}
 
-	fname := strings.TrimSpace(strings.ToLower(summary))
-	fname = strings.ReplaceAll(fname, " ", "-")
-	fname += ".md"
+	fname := cleanFilename(summary) + ".md"
 	fpath := filepath.Join(destDir, fname)
+	return fname, os.WriteFile(fpath, transcribed, 0664)
+}
 
-	return os.WriteFile(fpath, transcribed, 0664)
+var re = regexp.MustCompile(`[^a-zA-Z0-9 ]+`)
+
+func cleanFilename(s string) string {
+	cleaned := strings.TrimSpace(strings.ToLower(s))
+	cleaned = re.ReplaceAllString(cleaned, "")
+	cleaned = strings.Join(strings.Split(cleaned, " "), "-")
+	if len(cleaned) > 50 {
+		cleaned = cleaned[:50]
+	}
+	return cleaned
 }
 
 func transcribe(ctx context.Context, waveFile string) ([]byte, error) {
-	// Call bash because whisperfile is a script that switches on the arch
+	// Call through bash because whisperfile is a script that switches on the arch, otherwise you get an exec format error
 	cmd := exec.CommandContext(ctx, "bash", "-c", `./whisper-tiny.en.llamafile -f "`+waveFile+`" --no-prints`)
 	cmd.Stderr = os.Stderr
 	buf := new(bytes.Buffer)
