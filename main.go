@@ -3,8 +3,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
-	"math/rand"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -83,19 +84,20 @@ func findWAVFiles(source string) ([]string, error) {
 }
 
 func processFile(ctx context.Context, destDir string, waveFile string) error {
-	// TODO: temporary
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	randomString := make([]byte, 10)
-	for i := range randomString {
-		randomString[i] = charset[rand.Intn(len(charset))]
-	}
-
 	transcribed, err := transcribe(ctx, waveFile)
 	if err != nil {
 		return err
 	}
 
-	fpath := filepath.Join(destDir, string(randomString))
+	summary, err := ollamaTitleSummary(ctx, string(transcribed))
+	if err != nil {
+		return fmt.Errorf("failed to create summary: %w", err)
+	}
+
+	fname := strings.TrimSpace(strings.ToLower(summary))
+	fname = strings.ReplaceAll(fname, " ", "-")
+	fname += ".md"
+	fpath := filepath.Join(destDir, fname)
 
 	return os.WriteFile(fpath, transcribed, 0664)
 }
@@ -125,4 +127,43 @@ func removeTimestamps(input []byte) []byte {
 	}
 
 	return bytes.Join(result, []byte("\n"))
+}
+
+func ollamaTitleSummary(ctx context.Context, content string) (string, error) {
+	prompt := fmt.Sprintf(`Summarize the following content. Your summary will be used in a file name. Keep it short with 3 to 7 words. Only respond with the summary. Do not elaborate.
+	CONTENT:
+	%s`, content)
+
+	const model = "llama3.1"
+	rbody, err := json.Marshal(map[string]any{
+		"system": "You are a helpful summarizer.",
+		"model":  model,
+		"prompt": prompt,
+		"stream": false,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	const endpoint = "http://localhost:11434/api/generate"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewBuffer(rbody))
+	if err != nil {
+		return "", fmt.Errorf("error creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("error making request to Ollama: %w", err)
+	}
+	defer resp.Body.Close()
+
+	result := struct {
+		Response string `json:"response"`
+	}{}
+	if err = json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("decode Ollama response: %w", err)
+	}
+
+	return result.Response, nil
 }
