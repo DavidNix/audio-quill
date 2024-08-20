@@ -16,15 +16,23 @@ But audio isn't as useful as text. So this script turns them into text which I c
 
 ## Setup
 
-Download whisperfile.
+Download [whisperfile](https://huggingface.co/Mozilla/whisperfile).
 
 ```sh
 wget https://huggingface.co/Mozilla/whisperfile/resolve/main/whisper-tiny.en.llamafile
 chmod +x whisper-tiny.en.llamafile
 ```
 
+Make sure [Ollama](https://ollama.com/) is running and you've downloaded llama3.1 model.
+
+```sh
+ollama run llama3.1
+```
+
 ## Usage
 
-## TODO
+Run the app
 
-Self-contained binary
+```sh
+go run . --source /Volumes/USB-DISK/RECORD --dest ~/Downloads/aquill1
+```
